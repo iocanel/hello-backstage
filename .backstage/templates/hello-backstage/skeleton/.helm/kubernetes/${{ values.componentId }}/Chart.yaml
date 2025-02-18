@@ -1,0 +1,4 @@
+
+name: ${{ values.componentId }}
+version: ${{ values.version }}
+apiVersion: v2

@@ -1,0 +1,6 @@
+
+app:
+  image: "${{ values.helmAppImage }}"
+  replicas: "${{ values.helmAppReplicas }}"
+  ports:
+    http: "${{ values.helmAppPortsHttp }}"
