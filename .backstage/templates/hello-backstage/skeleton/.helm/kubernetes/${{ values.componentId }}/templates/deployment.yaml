@@ -1,0 +1,46 @@
+ |
+  
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      app.quarkus.io/quarkus-version: 3.18.3
+      app.quarkus.io/commit-id: 5b82523cd82f77e6300a5f8718f43cbb64912ad7
+      app.quarkus.io/vcs-uri: https://github.com/iocanel/${{ values.componentId }}.git
+      app.quarkus.io/build-timestamp: 2025-04-08 - 11:21:28 +0000
+    labels:
+      app.kubernetes.io/name: ${{ values.componentId }}
+      app.kubernetes.io/version: ${{ values.version }}
+      app.kubernetes.io/managed-by: quarkus
+    name: ${{ values.componentId }}
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app.kubernetes.io/version: ${{ values.version }}
+        app.kubernetes.io/name: ${{ values.componentId }}
+    template:
+      metadata:
+        annotations:
+          app.quarkus.io/quarkus-version: 3.18.3
+          app.quarkus.io/commit-id: 5b82523cd82f77e6300a5f8718f43cbb64912ad7
+          app.quarkus.io/vcs-uri: https://github.com/iocanel/${{ values.componentId }}.git
+          app.quarkus.io/build-timestamp: 2025-04-08 - 11:21:28 +0000
+        labels:
+          app.kubernetes.io/managed-by: quarkus
+          app.kubernetes.io/version: ${{ values.version }}
+          app.kubernetes.io/name: ${{ values.componentId }}
+      spec:
+        containers:
+          - env:
+              - name: KUBERNETES_NAMESPACE
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+            image: {{ .Values.app.image }}
+            imagePullPolicy: Always
+            name: ${{ values.componentId }}
+            ports:
+              - containerPort: {{ .Values.app.ports.http }}
+                name: http
+                protocol: TCP
