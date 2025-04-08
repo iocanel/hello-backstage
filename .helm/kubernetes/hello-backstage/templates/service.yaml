@@ -1,0 +1,25 @@
+ |
+  
+  apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      app.quarkus.io/quarkus-version: 3.18.3
+      app.quarkus.io/commit-id: c708e59c9760a922c4a2b1a73ee3b21d1ffc6f4a
+      app.quarkus.io/vcs-uri: https://github.com/iocanel/hello-backstage.git
+      app.quarkus.io/build-timestamp: 2025-04-08 - 12:38:31 +0000
+    labels:
+      app.kubernetes.io/name: hello-backstage
+      app.kubernetes.io/version: 1.0.0-SNAPSHOT
+      app.kubernetes.io/managed-by: quarkus
+    name: hello-backstage
+  spec:
+    ports:
+      - name: http
+        port: 80
+        protocol: TCP
+        targetPort: {{ .Values.app.ports.http }}
+    selector:
+      app.kubernetes.io/name: hello-backstage
+      app.kubernetes.io/version: 1.0.0-SNAPSHOT
+    type: ClusterIP

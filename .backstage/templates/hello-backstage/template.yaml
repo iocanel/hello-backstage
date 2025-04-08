@@ -98,6 +98,28 @@ spec:
         description: The visibility of the git repository
         default: public
         ui:autofocus: false
+  - title: Helm values
+    properties:
+      helm:
+        type: object
+        properties:
+          app:
+            type: object
+            properties:
+              image:
+                type: string
+                default: docker.io/iocanel/hello-backstage:1.0.0-SNAPSHOT
+                ui:autofocus: false
+              ports:
+                type: object
+                properties:
+                  http:
+                    type: number
+                    default: 8080
+                    ui:autofocus: false
+                ui:autofocus: false
+            ui:autofocus: false
+        ui:autofocus: false
   steps:
   - id: render
     name: Fetch Application Files
@@ -110,6 +132,8 @@ spec:
         package: "${{ parameters.package }}"
         repoName: "${{ parameters.repoName }}"
         groupId: "${{ parameters.groupId }}"
+        helmAppImage: "${{ parameters.helm.app.image }}"
+        helmAppPortsHttp: "${{ parameters.helm.app.ports.http }}"
         artifactId: "${{ parameters.artifactId }}"
         repoBranch: "${{ parameters.repoBranch }}"
         version: "${{ parameters.version }}"
