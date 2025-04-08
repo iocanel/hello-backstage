@@ -1,0 +1,31 @@
+ 
+apiVersion: backstage.io/v1alpha1
+kind: API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: user:guest
+  definition:
+    $text: ./openapi.yaml
+metadata:
+  name: "${{ values.componentId }}-api"
+--- 
+apiVersion: backstage.io/v1alpha1
+kind: Component
+spec:
+  type: application
+  lifecycle: production
+  owner: user:guest
+  providesApis:
+  - "${{ values.componentId }}-api"
+metadata:
+  name: "${{ values.componentId }}"
+  labels:
+    app.kubernetes.io/name: "${{ values.componentId }}"
+    app.kubernetes.io/version: "${{ values.version }}"
+    app.quarkus.io/version: 3.18.3
+  annotations:
+    backstage.io/source-location: "url:https://${{ values.repoHost }}/${{ values.repoOrg }}/${{ values.repoName }}"
+  tags:
+  - java
+  - quarkus
