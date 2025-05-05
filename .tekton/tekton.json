@@ -1,0 +1,766 @@
+[ {
+  "apiVersion" : "v1",
+  "kind" : "ConfigMap",
+  "metadata" : {
+    "name" : "hello-backstage-maven-settings"
+  },
+  "data" : {
+    "settings.xml" : "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<settings>\n  <mirrors>\n    <mirror>\n      <id>maven.org</id>\n      <name>Default mirror</name>\n      <url>https://repo1.maven.org/maven2</url>\n      <mirrorOf>central</mirrorOf>\n    </mirror>\n  </mirrors>\n</settings>\n"
+  }
+}, {
+  "apiVersion" : "v1",
+  "kind" : "PersistentVolumeClaim",
+  "metadata" : {
+    "name" : "hello-backstage-project-pvc"
+  },
+  "spec" : {
+    "accessModes" : [ "ReadWriteOnce" ],
+    "resources" : {
+      "requests" : {
+        "storage" : "2Gi"
+      }
+    },
+    "volumeMode" : "Filesystem"
+  }
+}, {
+  "apiVersion" : "v1",
+  "kind" : "PersistentVolumeClaim",
+  "metadata" : {
+    "name" : "hello-backstage-maven-repo-pvc"
+  },
+  "spec" : {
+    "accessModes" : [ "ReadWriteOnce" ],
+    "resources" : {
+      "requests" : {
+        "storage" : "2Gi"
+      }
+    },
+    "volumeMode" : "Filesystem"
+  }
+}, {
+  "apiVersion" : "tekton.dev/v1",
+  "kind" : "Task",
+  "metadata" : {
+    "name" : "ls"
+  },
+  "spec" : {
+    "params" : [ {
+      "description" : "The args to pass to ls",
+      "name" : "args",
+      "type" : "string"
+    } ],
+    "steps" : [ {
+      "args" : [ "ls $(params.args)" ],
+      "command" : [ "sh", "-c" ],
+      "image" : "quay.io/redhat-cop/ubi8-git:v1.0",
+      "name" : "ls",
+      "workingDir" : "$(workspaces.project-dir.path)"
+    } ],
+    "workspaces" : [ {
+      "description" : "A workspace for the task",
+      "mountPath" : "/mnt/workspace",
+      "name" : "project-dir",
+      "optional" : true
+    } ]
+  }
+}, {
+  "apiVersion" : "tekton.dev/v1",
+  "kind" : "Task",
+  "metadata" : {
+    "name" : "rm"
+  },
+  "spec" : {
+    "params" : [ {
+      "description" : "The args to pass to ls",
+      "name" : "args",
+      "type" : "string"
+    } ],
+    "steps" : [ {
+      "args" : [ "rm $(params.args)" ],
+      "command" : [ "sh", "-c" ],
+      "image" : "quay.io/redhat-cop/ubi8-git:v1.0",
+      "name" : "rm",
+      "workingDir" : "$(workspaces.project-dir.path)"
+    } ],
+    "workspaces" : [ {
+      "description" : "A workspace for the task",
+      "mountPath" : "/mnt/workspace",
+      "name" : "project-dir",
+      "optional" : true
+    } ]
+  }
+}, {
+  "apiVersion" : "tekton.dev/v1",
+  "kind" : "Task",
+  "metadata" : {
+    "annotations" : {
+      "tekton.dev/pipelines.minVersion" : "0.38.0",
+      "tekton.dev/categories" : "Git",
+      "tekton.dev/tags" : "git",
+      "tekton.dev/displayName" : "git clone",
+      "tekton.dev/platforms" : "linux/amd64,linux/s390x,linux/ppc64le,linux/arm64"
+    },
+    "labels" : {
+      "app.kubernetes.io/version" : "0.9"
+    },
+    "name" : "git-clone"
+  },
+  "spec" : {
+    "description" : "These Tasks are Git tasks to work with repositories used by other tasks in your Pipeline.\nThe git-clone Task will clone a repo from the provided url into the output Workspace. By default the repo will be cloned into the root of your Workspace. You can clone into a subdirectory by setting this Task's subdirectory param. This Task also supports sparse checkouts. To perform a sparse checkout, pass a list of comma separated directory patterns to this Task's sparseCheckoutDirectories param.\nCredits: https://raw.githubusercontent.com/tektoncd/catalog/refs/heads/main/task/git-clone/0.9/git-clone.yaml",
+    "params" : [ {
+      "description" : "Repository URL to clone from.",
+      "name" : "url",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "Revision to checkout. (branch, tag, sha, ref, etc...)",
+      "name" : "revision",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "Refspec to fetch before checking out revision.",
+      "name" : "refspec"
+    }, {
+      "default" : "true",
+      "description" : "Initialize and fetch git submodules.",
+      "name" : "submodules",
+      "type" : "string"
+    }, {
+      "default" : "1",
+      "description" : "Perform a shallow clone, fetching only the most recent N commits.",
+      "name" : "depth",
+      "type" : "string"
+    }, {
+      "default" : "true",
+      "description" : "Set the `http.sslVerify` global git config. Setting this to `false` is not advised unless you are sure that you trust your git remote.",
+      "name" : "sslVerify",
+      "type" : "string"
+    }, {
+      "default" : "ca-bundle.crt",
+      "description" : "file name of mounted crt using ssl-ca-directory workspace. default value is ca-bundle.crt.",
+      "name" : "crtFileName",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "Subdirectory inside the `project-fir` Workspace to clone the repo into.",
+      "name" : "subdirectory",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "Define the directory patterns to match or exclude when performing a sparse checkout.",
+      "name" : "sparseCheckoutDirectories",
+      "type" : "string"
+    }, {
+      "default" : "true",
+      "description" : "Clean out the contents of the destination directory if it already exists before cloning.",
+      "name" : "deleteExisting",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "HTTP proxy server for non-SSL requests.",
+      "name" : "httpProxy",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "HTTPS proxy server for SSL requests.",
+      "name" : "httpsProxy",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "Opt out of proxying HTTP/HTTPS requests.",
+      "name" : "noProxy",
+      "type" : "string"
+    }, {
+      "default" : "true",
+      "description" : "Log the commands that are executed during `git-clone`'s operation.",
+      "name" : "verbose",
+      "type" : "string"
+    }, {
+      "default" : "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.40.2",
+      "description" : "The image providing the git-init binary that this Task runs.",
+      "name" : "gitInitImage",
+      "type" : "string"
+    }, {
+      "default" : "/home/git",
+      "description" : "Absolute path to the user's home directory.\n",
+      "name" : "userHome",
+      "type" : "string"
+    } ],
+    "results" : [ {
+      "description" : "The precise commit SHA that was fetched by this Task.",
+      "name" : "commit"
+    }, {
+      "description" : "The precise URL that was fetched by this Task.",
+      "name" : "url"
+    }, {
+      "description" : "The epoch timestamp of the commit that was fetched by this Task.",
+      "name" : "committer-date"
+    } ],
+    "steps" : [ {
+      "env" : [ {
+        "name" : "HOME",
+        "value" : "$(params.userHome)"
+      }, {
+        "name" : "PARAM_URL",
+        "value" : "$(params.url)"
+      }, {
+        "name" : "PARAM_REVISION",
+        "value" : "$(params.revision)"
+      }, {
+        "name" : "PARAM_REFSPEC",
+        "value" : "$(params.refspec)"
+      }, {
+        "name" : "PARAM_SUBMODULES",
+        "value" : "$(params.submodules)"
+      }, {
+        "name" : "PARAM_DEPTH",
+        "value" : "$(params.depth)"
+      }, {
+        "name" : "PARAM_SSL_VERIFY",
+        "value" : "$(params.sslVerify)"
+      }, {
+        "name" : "PARAM_CRT_FILENAME",
+        "value" : "$(params.crtFileName)"
+      }, {
+        "name" : "PARAM_SUBDIRECTORY",
+        "value" : "$(params.subdirectory)"
+      }, {
+        "name" : "PARAM_DELETE_EXISTING",
+        "value" : "$(params.deleteExisting)"
+      }, {
+        "name" : "PARAM_HTTP_PROXY",
+        "value" : "$(params.httpProxy)"
+      }, {
+        "name" : "PARAM_HTTPS_PROXY",
+        "value" : "$(params.httpsProxy)"
+      }, {
+        "name" : "PARAM_NO_PROXY",
+        "value" : "$(params.noProxy)"
+      }, {
+        "name" : "PARAM_VERBOSE",
+        "value" : "$(params.verbose)"
+      }, {
+        "name" : "PARAM_SPARSE_CHECKOUT_DIRECTORIES",
+        "value" : "$(params.sparseCheckoutDirectories)"
+      }, {
+        "name" : "PARAM_USER_HOME",
+        "value" : "$(params.userHome)"
+      }, {
+        "name" : "WORKSPACE_OUTPUT_PATH",
+        "value" : "$(workspaces.project-dir.path)"
+      }, {
+        "name" : "WORKSPACE_SSH_DIRECTORY_BOUND",
+        "value" : "$(workspaces.ssh-directory.bound)"
+      }, {
+        "name" : "WORKSPACE_SSH_DIRECTORY_PATH",
+        "value" : "$(workspaces.ssh-directory.path)"
+      }, {
+        "name" : "WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND",
+        "value" : "$(workspaces.basic-auth.bound)"
+      }, {
+        "name" : "WORKSPACE_BASIC_AUTH_DIRECTORY_PATH",
+        "value" : "$(workspaces.basic-auth.path)"
+      }, {
+        "name" : "WORKSPACE_SSL_CA_DIRECTORY_BOUND",
+        "value" : "$(workspaces.ssl-ca-directory.bound)"
+      }, {
+        "name" : "WORKSPACE_SSL_CA_DIRECTORY_PATH",
+        "value" : "$(workspaces.ssl-ca-directory.path)"
+      } ],
+      "image" : "$(params.gitInitImage)",
+      "name" : "clone",
+      "script" : "#!/usr/bin/env sh\nset -eu\n\nif [ \"${PARAM_VERBOSE}\" = \"true\" ] ; then\n  set -x\nfi\n\nif [ \"${WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND}\" = \"true\" ] ; then\n  cp \"${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials\" \"${PARAM_USER_HOME}/.git-credentials\"\n  cp \"${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.gitconfig\" \"${PARAM_USER_HOME}/.gitconfig\"\n  chmod 400 \"${PARAM_USER_HOME}/.git-credentials\"\n  chmod 400 \"${PARAM_USER_HOME}/.gitconfig\"\nfi\n\nif [ \"${WORKSPACE_SSH_DIRECTORY_BOUND}\" = \"true\" ] ; then\n  cp -R \"${WORKSPACE_SSH_DIRECTORY_PATH}\" \"${PARAM_USER_HOME}\"/.ssh\n  chmod 700 \"${PARAM_USER_HOME}\"/.ssh\n  chmod -R 400 \"${PARAM_USER_HOME}\"/.ssh/*\nfi\n\nif [ \"${WORKSPACE_SSL_CA_DIRECTORY_BOUND}\" = \"true\" ] ; then\n   export GIT_SSL_CAPATH=\"${WORKSPACE_SSL_CA_DIRECTORY_PATH}\"\n   if [ \"${PARAM_CRT_FILENAME}\" != \"\" ] ; then\n      export GIT_SSL_CAINFO=\"${WORKSPACE_SSL_CA_DIRECTORY_PATH}/${PARAM_CRT_FILENAME}\"\n   fi\nfi\nCHECKOUT_DIR=\"${WORKSPACE_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}\"\n\ncleandir() {\n  # Delete any existing contents of the repo directory if it exists.\n  #\n  # We don't just \"rm -rf ${CHECKOUT_DIR}\" because ${CHECKOUT_DIR} might be \"/\"\n  # or the root of a mounted volume.\n  if [ -d \"${CHECKOUT_DIR}\" ] ; then\n    # Delete non-hidden files and directories\n    rm -rf \"${CHECKOUT_DIR:?}\"/*\n    # Delete files and directories starting with . but excluding ..\n    rm -rf \"${CHECKOUT_DIR}\"/.[!.]*\n    # Delete files and directories starting with .. plus any other character\n    rm -rf \"${CHECKOUT_DIR}\"/..?*\n  fi\n}\n\nif [ \"${PARAM_DELETE_EXISTING}\" = \"true\" ] ; then\n  cleandir || true\nfi\n\ntest -z \"${PARAM_HTTP_PROXY}\" || export HTTP_PROXY=\"${PARAM_HTTP_PROXY}\"\ntest -z \"${PARAM_HTTPS_PROXY}\" || export HTTPS_PROXY=\"${PARAM_HTTPS_PROXY}\"\ntest -z \"${PARAM_NO_PROXY}\" || export NO_PROXY=\"${PARAM_NO_PROXY}\"\n\ngit config --global --add safe.directory \"${WORKSPACE_OUTPUT_PATH}\"\n/ko-app/git-init \\\n  -url=\"${PARAM_URL}\" \\\n  -revision=\"${PARAM_REVISION}\" \\\n  -refspec=\"${PARAM_REFSPEC}\" \\\n  -path=\"${CHECKOUT_DIR}\" \\\n  -sslVerify=\"${PARAM_SSL_VERIFY}\" \\\n  -submodules=\"${PARAM_SUBMODULES}\" \\\n  -depth=\"${PARAM_DEPTH}\" \\\n  -sparseCheckoutDirectories=\"${PARAM_SPARSE_CHECKOUT_DIRECTORIES}\"\ncd \"${CHECKOUT_DIR}\"\nRESULT_SHA=\"$(git rev-parse HEAD)\"\nEXIT_CODE=\"$?\"\nif [ \"${EXIT_CODE}\" != 0 ] ; then\n  exit \"${EXIT_CODE}\"\nfi\nRESULT_COMMITTER_DATE=\"$(git log -1 --pretty=%ct)\"\nprintf \"%s\" \"${RESULT_COMMITTER_DATE}\" > \"$(results.committer-date.path)\"\nprintf \"%s\" \"${RESULT_SHA}\" > \"$(results.commit.path)\"\nprintf \"%s\" \"${PARAM_URL}\" > \"$(results.url.path)\"\n",
+      "securityContext" : {
+        "runAsNonRoot" : true,
+        "runAsUser" : 65532
+      }
+    } ],
+    "workspaces" : [ {
+      "description" : "The git repo will be cloned onto the volume backing this Workspace.",
+      "name" : "project-dir"
+    }, {
+      "description" : "A .ssh directory with private key, known_hosts, config, etc. Copied to\nthe user's home before git commands are executed. Used to authenticate\nwith the git remote when performing the clone. Binding a Secret to this\nWorkspace is strongly recommended over other volume types.\n",
+      "name" : "ssh-directory",
+      "optional" : true
+    }, {
+      "description" : "A Workspace containing a .gitconfig and .git-credentials file. These\nwill be copied to the user's home before any git commands are run. Any\nother files in this Workspace are ignored. It is strongly recommended\nto use ssh-directory over basic-auth whenever possible and to bind a\nSecret to this Workspace over other volume types.\n",
+      "name" : "basic-auth",
+      "optional" : true
+    }, {
+      "description" : "A workspace containing CA certificates, this will be used by Git to\nverify the peer with when fetching or pushing over HTTPS.\n",
+      "name" : "ssl-ca-directory",
+      "optional" : true
+    } ]
+  }
+}, {
+  "apiVersion" : "tekton.dev/v1",
+  "kind" : "Task",
+  "metadata" : {
+    "annotations" : {
+      "tekton.dev/pipelines.minVersion" : "0.50.0",
+      "tekton.dev/categories" : "Build Tools",
+      "tekton.dev/tags" : "build-tool",
+      "tekton.dev/platforms" : "linux/amd64,linux/s390x,linux/ppc64le"
+    },
+    "labels" : {
+      "app.kubernetes.io/version" : "0.4"
+    },
+    "name" : "maven"
+  },
+  "spec" : {
+    "description" : "This Task can be used to run a Maven build. It uses a workspace to store m2 local repo.",
+    "params" : [ {
+      "default" : "ghcr.io/carlossg/maven:3.9.9-eclipse-temurin-21",
+      "description" : "Maven base image",
+      "name" : "MAVEN_IMAGE",
+      "type" : "string"
+    }, {
+      "default" : [ "package" ],
+      "description" : "maven goals to run",
+      "name" : "GOALS",
+      "type" : "array"
+    }, {
+      "default" : "",
+      "description" : "The Maven repository mirror url",
+      "name" : "MAVEN_MIRROR_URL",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "The username for the server",
+      "name" : "SERVER_USER",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "The password for the server",
+      "name" : "SERVER_PASSWORD",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "The username for the proxy server",
+      "name" : "PROXY_USER",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "The password for the proxy server",
+      "name" : "PROXY_PASSWORD",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "Port number for the proxy server",
+      "name" : "PROXY_PORT",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "Proxy server Host",
+      "name" : "PROXY_HOST",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "Non proxy server host",
+      "name" : "PROXY_NON_PROXY_HOSTS",
+      "type" : "string"
+    }, {
+      "default" : "http",
+      "description" : "Protocol for the proxy ie http or https",
+      "name" : "PROXY_PROTOCOL",
+      "type" : "string"
+    }, {
+      "default" : ".",
+      "description" : "The context directory within the repository for sources on which we want to execute maven goals.",
+      "name" : "CONTEXT_DIR",
+      "type" : "string"
+    } ],
+    "results" : [ {
+      "description" : "Maven project group id",
+      "name" : "group-id",
+      "type" : "string"
+    }, {
+      "description" : "Maven project artifact id",
+      "name" : "artifact-id",
+      "type" : "string"
+    }, {
+      "description" : "version",
+      "name" : "version",
+      "type" : "string"
+    } ],
+    "steps" : [ {
+      "image" : "registry.access.redhat.com/ubi8/ubi-minimal:8.2",
+      "name" : "mvn-settings",
+      "script" : "#!/usr/bin/env bash\n\n[[ -f $(workspaces.maven-settings.path)/settings.xml ]] && \\\necho \"using existing $(workspaces.maven-settings.path)/settings.xml\" && exit 0\n\ncat > \"$(workspaces.maven-settings.path)/settings.xml\" <<EOF\n<settings>\n  <servers>\n    <!-- The servers added here are generated from environment variables. Don't change. -->\n    <!-- ### SERVER's USER INFO from ENV ### -->\n  </servers>\n  <mirrors>\n    <!-- The mirrors added here are generated from environment variables. Don't change. -->\n    <!-- ### mirrors from ENV ### -->\n  </mirrors>\n  <proxies>\n    <!-- The proxies added here are generated from environment variables. Don't change. -->\n    <!-- ### HTTP proxy from ENV ### -->\n  </proxies>\n</settings>\nEOF\n\nxml=\"\"\nif [ -n \"$(params.PROXY_HOST)\" ] && [ -n \"$(params.PROXY_PORT)\" ]; then\n  xml=\"<proxy>\\\n    <id>genproxy</id>\\\n    <active>true</active>\\\n    <protocol>$(params.PROXY_PROTOCOL)</protocol>\\\n    <host>$(params.PROXY_HOST)</host>\\\n    <port>$(params.PROXY_PORT)</port>\"\n  if [ -n \"$(params.PROXY_USER)\" ] && [ -n \"$(params.PROXY_PASSWORD)\" ]; then\n    xml=\"$xml\\\n        <username>$(params.PROXY_USER)</username>\\\n        <password>$(params.PROXY_PASSWORD)</password>\"\n  fi\n  if [ -n \"$(params.PROXY_NON_PROXY_HOSTS)\" ]; then\n    xml=\"$xml\\\n        <nonProxyHosts>$(params.PROXY_NON_PROXY_HOSTS)</nonProxyHosts>\"\n  fi\n  xml=\"$xml\\\n      </proxy>\"\n  sed -i \"s|<!-- ### HTTP proxy from ENV ### -->|$xml|\" \"$(workspaces.maven-settings.path)/settings.xml\"\nfi\n\nif [ -n \"$(params.SERVER_USER)\" ] && [ -n \"$(params.SERVER_PASSWORD)\" ]; then\n  xml=\"<server>\\\n    <id>serverid</id>\"\n  xml=\"$xml\\\n        <username>$(params.SERVER_USER)</username>\\\n        <password>$(params.SERVER_PASSWORD)</password>\"\n  xml=\"$xml\\\n      </server>\"\n  sed -i \"s|<!-- ### SERVER's USER INFO from ENV ### -->|$xml|\" \"$(workspaces.maven-settings.path)/settings.xml\"\nfi\n\nif [ -n \"$(params.MAVEN_MIRROR_URL)\" ]; then\n  xml=\"    <mirror>\\\n    <id>mirror.default</id>\\\n    <url>$(params.MAVEN_MIRROR_URL)</url>\\\n    <mirrorOf>central</mirrorOf>\\\n  </mirror>\"\n  sed -i \"s|<!-- ### mirrors from ENV ### -->|$xml|\" \"$(workspaces.maven-settings.path)/settings.xml\"\nfi\n"
+    }, {
+      "args" : [ "$(params.GOALS[*])" ],
+      "image" : "$(params.MAVEN_IMAGE)",
+      "name" : "mvn-goals",
+      "script" : "#!/usr/bin/env bash\n\n/usr/bin/mvn -s $(workspaces.maven-settings.path)/settings.xml \"$@\" '-Dmaven.repo.local=$(workspaces.maven-local-repo.path)/.m2'\n\nGROUPID=$(/usr/bin/mvn -s $(workspaces.maven-settings.path)/settings.xml '-Dmaven.repo.local=$(workspaces.maven-local-repo.path)/.m2' -q -Dexec.executable=echo -Dexec.args='${project.groupId}' --non-recursive exec:exec)\necho -n $GROUPID | tee $(results.group-id.path)\nARTIFACTID=$(/usr/bin/mvn -s $(workspaces.maven-settings.path)/settings.xml '-Dmaven.repo.local=$(workspaces.maven-local-repo.path)/.m2' -q -Dexec.executable=echo -Dexec.args='${project.artifactId}' --non-recursive exec:exec)\necho -n $ARTIFACTID | tee $(results.artifact-id.path)\nVERSION=$(/usr/bin/mvn -s $(workspaces.maven-settings.path)/settings.xml '-Dmaven.repo.local=$(workspaces.maven-local-repo.path)/.m2' -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)\necho -n $VERSION | tee $(results.version.path)\n",
+      "securityContext" : {
+        "runAsNonRoot" : true,
+        "runAsUser" : 65532
+      },
+      "workingDir" : "$(workspaces.project-dir.path)/$(params.CONTEXT_DIR)"
+    } ],
+    "workspaces" : [ {
+      "description" : "The workspace consisting of maven project.",
+      "name" : "project-dir"
+    }, {
+      "description" : "The workspace consisting of the custom maven settings provided by the user.",
+      "name" : "maven-settings"
+    }, {
+      "description" : "Local repo (m2) workspace",
+      "name" : "maven-local-repo",
+      "optional" : true
+    } ]
+  }
+}, {
+  "apiVersion" : "tekton.dev/v1",
+  "kind" : "Task",
+  "metadata" : {
+    "annotations" : {
+      "tekton.dev/pipelines.minVersion" : "0.12.1",
+      "tekton.dev/tags" : "image-build, appstudio, hacbs",
+      "argocd.argoproj.io/sync-wave" : "0"
+    },
+    "labels" : {
+      "app.kubernetes.io/version" : "0.1",
+      "build.appstudio.redhat.com/build_type" : "docker"
+    },
+    "name" : "buildah"
+  },
+  "spec" : {
+    "description" : "Buildah task builds source code into a container image and pushes the image into container registry using buildah tool.\nIn addition it generates a SBOM file, injects the SBOM file into final container image and pushes the SBOM file as separate image using cosign tool.\nWhen [Java dependency rebuild](https://redhat-appstudio.github.io/docs.stonesoup.io/Documentation/main/cli/proc_enabled_java_dependencies.html) is enabled it triggers rebuilds of Java artifacts.\nWhen prefetch-dependencies task was activated it is using its artifacts to run build in hermetic environment.",
+    "params" : [ {
+      "description" : "Reference of the image buildah will produce.",
+      "name" : "IMAGE",
+      "type" : "string"
+    }, {
+      "default" : "quay.io/redhat-appstudio/buildah:v1.31.0@sha256:34f12c7b72ec2c28f1ded0c494b428df4791c909f1f174dd21b8ed6a57cf5ddb",
+      "description" : "The location of the buildah builder image.",
+      "name" : "BUILDER_IMAGE",
+      "type" : "string"
+    }, {
+      "default" : "src/main/docker/Dockerfile.jvm",
+      "description" : "Path to the Dockerfile to build.",
+      "name" : "DOCKERFILE",
+      "type" : "string"
+    }, {
+      "default" : ".",
+      "description" : "Path to the directory to use as context.",
+      "name" : "CONTEXT",
+      "type" : "string"
+    }, {
+      "default" : "true",
+      "description" : "Verify the TLS on the registry endpoint (for push/pull to a non-TLS registry)",
+      "name" : "TLSVERIFY",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "default path of the registry authentication file",
+      "name" : "REGISTRY_AUTH_PATH",
+      "type" : "string"
+    }, {
+      "default" : "false",
+      "description" : "Determines if build will be executed without network access.",
+      "name" : "HERMETIC",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "In case it is not empty, the prefetched content should be made available to the build.",
+      "name" : "PREFETCH_INPUT",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "Delete image tag after specified time. Empty means to keep the image tag. Time values could be something like 1h, 2d, 3w for hours, days, and weeks, respectively.",
+      "name" : "IMAGE_EXPIRES_AFTER",
+      "type" : "string"
+    }, {
+      "default" : "",
+      "description" : "The image is built from this commit.",
+      "name" : "COMMIT_SHA",
+      "type" : "string"
+    } ],
+    "results" : [ {
+      "description" : "Digest of the image just built",
+      "name" : "IMAGE_DIGEST"
+    }, {
+      "description" : "Image repository where the built image was pushed",
+      "name" : "IMAGE_URL"
+    }, {
+      "description" : "Digests of the base images used for build",
+      "name" : "BASE_IMAGES_DIGESTS"
+    }, {
+      "description" : "The counting of Java components by publisher in JSON format",
+      "name" : "SBOM_JAVA_COMPONENTS_COUNT",
+      "type" : "string"
+    }, {
+      "description" : "The Java dependencies that came from community sources such as Maven central.",
+      "name" : "JAVA_COMMUNITY_DEPENDENCIES"
+    } ],
+    "stepTemplate" : {
+      "env" : [ {
+        "name" : "BUILDAH_FORMAT",
+        "value" : "oci"
+      }, {
+        "name" : "STORAGE_DRIVER",
+        "value" : "vfs"
+      }, {
+        "name" : "HERMETIC",
+        "value" : "$(params.HERMETIC)"
+      }, {
+        "name" : "PREFETCH_INPUT",
+        "value" : "$(params.PREFETCH_INPUT)"
+      }, {
+        "name" : "CONTEXT",
+        "value" : "$(params.CONTEXT)"
+      }, {
+        "name" : "DOCKERFILE",
+        "value" : "$(params.DOCKERFILE)"
+      }, {
+        "name" : "REGISTRY_AUTH_FILE",
+        "value" : "$(params.REGISTRY_AUTH_PATH)/config.json"
+      }, {
+        "name" : "DOCKER_CONFIG",
+        "value" : "$(params.REGISTRY_AUTH_PATH)"
+      }, {
+        "name" : "IMAGE",
+        "value" : "$(params.IMAGE)"
+      }, {
+        "name" : "TLSVERIFY",
+        "value" : "$(params.TLSVERIFY)"
+      }, {
+        "name" : "IMAGE_EXPIRES_AFTER",
+        "value" : "$(params.IMAGE_EXPIRES_AFTER)"
+      } ]
+    },
+    "steps" : [ {
+      "computeResources" : {
+        "limits" : {
+          "memory" : "4Gi"
+        },
+        "requests" : {
+          "memory" : "512Mi",
+          "cpu" : "250m"
+        }
+      },
+      "env" : [ {
+        "name" : "COMMIT_SHA",
+        "value" : "$(params.COMMIT_SHA)"
+      } ],
+      "image" : "$(params.BUILDER_IMAGE)",
+      "name" : "build",
+      "script" : "# We don't mount the code source (= project git cloned) under ./source but ./ !\nSOURCE_CODE_DIR=.\n\nif [ -e \"$SOURCE_CODE_DIR/$CONTEXT/$DOCKERFILE\" ]; then\n  dockerfile_path=\"$SOURCE_CODE_DIR/$CONTEXT/$DOCKERFILE\"\nelif [ -e \"$SOURCE_CODE_DIR/$DOCKERFILE\" ]; then\n  dockerfile_path=\"$SOURCE_CODE_DIR/$DOCKERFILE\"\nelif echo \"$DOCKERFILE\" | grep -q \"^https\\?://\"; then\n  echo \"Fetch Dockerfile from $DOCKERFILE\"\n  dockerfile_path=$(mktemp --suffix=-Dockerfile)\n  http_code=$(curl -s -L -w \"%{http_code}\" --output \"$dockerfile_path\" \"$DOCKERFILE\")\n  if [ $http_code != 200 ]; then\n    echo \"No Dockerfile is fetched. Server responds $http_code\"\n    exit 1\n  fi\n  http_code=$(curl -s -L -w \"%{http_code}\" --output \"$dockerfile_path.dockerignore.tmp\" \"$DOCKERFILE.dockerignore\")\n  if [ $http_code = 200 ]; then\n    echo \"Fetched .dockerignore from $DOCKERFILE.dockerignore\"\n    mv \"$dockerfile_path.dockerignore.tmp\" $SOURCE_CODE_DIR/$CONTEXT/.dockerignore\n  fi\nelse\n  echo \"Cannot find Dockerfile $DOCKERFILE\"\n  exit 1\nfi\nif [ -n \"$JVM_BUILD_WORKSPACE_ARTIFACT_CACHE_PORT_80_TCP_ADDR\" ] && grep -q '^\\s*RUN \\(./\\)\\?mvn' \"$dockerfile_path\"; then\n  sed -i -e \"s|^\\s*RUN \\(\\(./\\)\\?mvn\\)\\(.*\\)|RUN echo \\\"<settings><mirrors><mirror><id>mirror.default</id><url>http://$JVM_BUILD_WORKSPACE_ARTIFACT_CACHE_PORT_80_TCP_ADDR/v1/cache/default/0/</url><mirrorOf>*</mirrorOf></mirror></mirrors></settings>\\\" > /tmp/settings.yaml; \\1 -s /tmp/settings.yaml \\3|g\" \"$dockerfile_path\"\n  touch /var/lib/containers/java\nfi\n\n# Fixing group permission on /var/lib/containers\nchown root:root /var/lib/containers\n\nsed -i 's/^\\s*short-name-mode\\s*=\\s*.*/short-name-mode = \"disabled\"/' /etc/containers/registries.conf\n\n# Setting new namespace to run buildah - 2^32-2\necho 'root:1:4294967294' | tee -a /etc/subuid >> /etc/subgid\n\nif [ \"${HERMETIC}\" == \"true\" ]; then\n  BUILDAH_ARGS=\"--pull=never\"\n  UNSHARE_ARGS=\"--net\"\n  for image in $(grep -i '^\\s*FROM' \"$dockerfile_path\" | sed 's/--platform=\\S*//' | awk '{print $2}'); do\n    if [ \"${image}\" != \"scratch\" ]; then\n      unshare -Ufp --keep-caps -r --map-users 1,1,65536 --map-groups 1,1,65536 -- buildah pull $image\n    fi\n  done\n  echo \"Build will be executed with network isolation\"\nfi\n\nif [ -n \"${PREFETCH_INPUT}\" ]; then\n  cp -r cachi2 /tmp/\n  chmod -R go+rwX /tmp/cachi2\n  VOLUME_MOUNTS=\"--volume /tmp/cachi2:/cachi2\"\n  sed -i 's|^\\s*run |RUN . /cachi2/cachi2.env \\&\\& \\\\\\n    |i' \"$dockerfile_path\"\n  echo \"Prefetched content will be made available\"\nfi\n\nLABELS=(\n  \"--label\" \"build-date=$(date -u +'%Y-%m-%dT%H:%M:%S')\"\n  \"--label\" \"architecture=$(uname -m)\"\n  \"--label\" \"vcs-type=git\"\n)\n[ -n \"$COMMIT_SHA\" ] && LABELS+=(\"--label\" \"vcs-ref=$COMMIT_SHA\")\n[ -n \"$IMAGE_EXPIRES_AFTER\" ] && LABELS+=(\"--label\" \"quay.expires-after=$IMAGE_EXPIRES_AFTER\")\n\nunshare -Uf $UNSHARE_ARGS --keep-caps -r --map-users 1,1,65536 --map-groups 1,1,65536 -- buildah build \\\n  $VOLUME_MOUNTS \\\n  $BUILDAH_ARGS \\\n  ${LABELS[@]} \\\n  --tls-verify=$TLSVERIFY --no-cache \\\n  --ulimit nofile=4096:4096 \\\n  -f \"$dockerfile_path\" -t $IMAGE $SOURCE_CODE_DIR/$CONTEXT\n\ncontainer=$(buildah from --pull-never $IMAGE)\nbuildah mount $container | tee /workspace/container_path\necho $container > /workspace/container_name\n\n# Save the SBOM produced by Cachi2 so it can be merged into the final SBOM later\nif [ -n \"${PREFETCH_INPUT}\" ]; then\n  cp /tmp/cachi2/output/bom.json ./sbom-cachi2.json\nfi\n\n# Expose base image digests\nbuildah images --format '{{ .Name }}:{{ .Tag }}@{{ .Digest }}' | grep -v $IMAGE > $(results.BASE_IMAGES_DIGESTS.path)\n",
+      "securityContext" : {
+        "capabilities" : {
+          "add" : [ "SETFCAP" ]
+        }
+      },
+      "volumeMounts" : [ {
+        "mountPath" : "/var/lib/containers",
+        "name" : "varlibcontainers"
+      } ],
+      "workingDir" : "$(workspaces.project-dir.path)"
+    }, {
+      "image" : "quay.io/redhat-appstudio/syft:v0.98.0@sha256:4d3856e6a2622700b9a9d5d74d9aaf5d8a55671653f80bf6c636677658680ede",
+      "name" : "sbom-syft-generate",
+      "script" : "syft dir:$(workspaces.project-dir.path)/$SOURCE_CODE_DIR --output cyclonedx-json=$(workspaces.project-dir.path)/sbom-source.json\nfind $(cat /workspace/container_path) -xtype l -delete\nsyft dir:$(cat /workspace/container_path) --output cyclonedx-json=$(workspaces.project-dir.path)/sbom-image.json\n",
+      "volumeMounts" : [ {
+        "mountPath" : "/var/lib/containers",
+        "name" : "varlibcontainers"
+      } ]
+    }, {
+      "image" : "quay.io/redhat-appstudio/hacbs-jvm-build-request-processor:127ee0c223a2b56a9bd20a6f2eaeed3bd6015f77",
+      "name" : "analyse-dependencies-java-sbom",
+      "script" : "if [ -f /var/lib/containers/java ]; then\n  /opt/jboss/container/java/run/run-java.sh analyse-dependencies path $(cat /workspace/container_path) -s $(workspaces.project-dir.path)/sbom-image.json --task-run-name $(context.taskRun.name) --publishers $(results.SBOM_JAVA_COMPONENTS_COUNT.path)\n  sed -i 's/^/ /' $(results.SBOM_JAVA_COMPONENTS_COUNT.path) # Workaround for SRVKP-2875\nelse\n  touch $(results.JAVA_COMMUNITY_DEPENDENCIES.path)\nfi\n",
+      "securityContext" : {
+        "runAsUser" : 0
+      },
+      "volumeMounts" : [ {
+        "mountPath" : "/var/lib/containers",
+        "name" : "varlibcontainers"
+      } ]
+    }, {
+      "image" : "registry.access.redhat.com/ubi9/python-39:1-158@sha256:967000729b17efdea309e297f4b1961c38b902a1ef18f6d886b8086c2a12f01f",
+      "name" : "merge-syft-sboms",
+      "script" : "#!/bin/python3\nimport json\n\n# load SBOMs\nwith open(\"./sbom-image.json\") as f:\n  image_sbom = json.load(f)\n\nwith open(\"./sbom-source.json\") as f:\n  source_sbom = json.load(f)\n\n# fetch unique components from available SBOMs\ndef get_identifier(component):\n  return component[\"name\"] + '@' + component.get(\"version\", \"\")\n\nimage_sbom_components = image_sbom.get(\"components\", [])\nexisting_components = [get_identifier(component) for component in image_sbom_components]\n\nsource_sbom_components = source_sbom.get(\"components\", [])\nfor component in source_sbom_components:\n  if get_identifier(component) not in existing_components:\n    image_sbom_components.append(component)\n    existing_components.append(get_identifier(component))\n\nimage_sbom_components.sort(key=lambda c: get_identifier(c))\n\n# write the CycloneDX unified SBOM\nwith open(\"./sbom-cyclonedx.json\", \"w\") as f:\n  json.dump(image_sbom, f, indent=4)\n",
+      "securityContext" : {
+        "runAsUser" : 0
+      },
+      "workingDir" : "$(workspaces.project-dir.path)"
+    }, {
+      "image" : "quay.io/redhat-appstudio/cachi2:0.3.0@sha256:46097f22b57e4d48a3fce96d931e08ccfe3a3e6421362d5f9353961279078eef",
+      "name" : "merge-cachi2-sbom",
+      "script" : "if [ -n \"${PREFETCH_INPUT}\" ]; then\n  echo \"Merging contents of sbom-cachi2.json into sbom-cyclonedx.json\"\n  /src/utils/merge_syft_sbom.py sbom-cachi2.json sbom-cyclonedx.json > sbom-temp.json\n  mv sbom-temp.json sbom-cyclonedx.json\nelse\n  echo \"Skipping step since no Cachi2 SBOM was produced\"\nfi\n",
+      "securityContext" : {
+        "runAsUser" : 0
+      },
+      "workingDir" : "$(workspaces.project-dir.path)"
+    }, {
+      "image" : "registry.access.redhat.com/ubi9/python-39:1-158@sha256:967000729b17efdea309e297f4b1961c38b902a1ef18f6d886b8086c2a12f01f",
+      "name" : "create-purl-sbom",
+      "script" : "#!/bin/python3\nimport json\n\nwith open(\"./sbom-cyclonedx.json\") as f:\n  cyclonedx_sbom = json.load(f)\n\npurls = [{\"purl\": component[\"purl\"]} for component in cyclonedx_sbom.get(\"components\", []) if \"purl\" in component]\npurl_content = {\"image_contents\": {\"dependencies\": purls}}\n\nwith open(\"sbom-purl.json\", \"w\") as output_file:\n  json.dump(purl_content, output_file, indent=4)\n",
+      "securityContext" : {
+        "runAsUser" : 0
+      },
+      "workingDir" : "$(workspaces.project-dir.path)"
+    }, {
+      "computeResources" : { },
+      "image" : "$(params.BUILDER_IMAGE)",
+      "name" : "inject-sbom-and-push",
+      "script" : "base_image_name=$(buildah inspect --format '{{ .Name }}:{{ .Tag }}' $IMAGE | cut -f1 -d'@')\nbase_image_digest=$(buildah images --format '{{ .Name }}:{{ .Tag }}@{{ .Digest }}' --filter reference=\"$image\")\ncontainer=$(buildah from --pull-never $IMAGE)\nbuildah copy $container sbom-cyclonedx.json sbom-purl.json /root/buildinfo/content_manifests/\nbuildah config -a org.opencontainers.image.base.name=${base_image_name} -a org.opencontainers.image.base.digest=${base_image_digest} $container\nbuildah commit $container $IMAGE\n\nstatus=-1\nmax_run=5\nsleep_sec=10\nfor run in $(seq 1 $max_run); do\n  status=0\n  [ \"$run\" -gt 1 ] && sleep $sleep_sec\n  echo \"Pushing sbom image to registry\"\n  buildah push \\\n    --tls-verify=$TLSVERIFY \\\n    --digestfile $(workspaces.project-dir.path)/image-digest $IMAGE \\\n    docker://$IMAGE && break || status=$?\ndone\nif [ \"$status\" -ne 0 ]; then\n    echo \"Failed to push sbom image to registry after ${max_run} tries\"\n    exit 1\nfi\n\ncat \"$(workspaces.project-dir.path)\"/image-digest | tee $(results.IMAGE_DIGEST.path)\necho -n \"$IMAGE\" | tee $(results.IMAGE_URL.path)\n",
+      "securityContext" : {
+        "capabilities" : {
+          "add" : [ "SETFCAP" ]
+        },
+        "runAsUser" : 0
+      },
+      "volumeMounts" : [ {
+        "mountPath" : "/var/lib/containers",
+        "name" : "varlibcontainers"
+      } ],
+      "workingDir" : "$(workspaces.project-dir.path)"
+    }, {
+      "args" : [ "attach", "sbom", "--sbom", "sbom-cyclonedx.json", "--type", "cyclonedx", "$(params.IMAGE)" ],
+      "image" : "quay.io/redhat-appstudio/cosign:v2.1.1@sha256:c883d6f8d39148f2cea71bff4622d196d89df3e510f36c140c097b932f0dd5d5",
+      "name" : "upload-sbom",
+      "workingDir" : "$(workspaces.project-dir.path)"
+    } ],
+    "volumes" : [ {
+      "emptyDir" : { },
+      "name" : "varlibcontainers"
+    } ],
+    "workspaces" : [ {
+      "description" : "Workspace containing the source code to build.",
+      "name" : "project-dir"
+    }, {
+      "description" : "Workspace containing the registry credentials",
+      "name" : "dockerconfig-secret"
+    } ]
+  }
+}, {
+  "apiVersion" : "tekton.dev/v1",
+  "kind" : "Pipeline",
+  "metadata" : {
+    "name" : "build-test-push"
+  },
+  "spec" : {
+    "params" : [ {
+      "description" : "url of the git repository to clone",
+      "name" : "url",
+      "type" : "string"
+    }, {
+      "default" : "src/main/docker/Dockerfile.jvm",
+      "description" : "Path to the dockerfile within the project cloned",
+      "name" : "dockerfile",
+      "type" : "string"
+    }, {
+      "description" : "Fully Qualified Output Image",
+      "name" : "output-image",
+      "type" : "string"
+    }, {
+      "default" : "false",
+      "description" : "A boolean indicating whether we would like to perform a quarkus native build",
+      "name" : "native",
+      "type" : "string"
+    }, {
+      "default" : "false",
+      "description" : "A boolean indicating whether we would like to execute a task",
+      "name" : "debug",
+      "type" : "string"
+    }, {
+      "default" : "true",
+      "description" : "boolean which allows to deploy the application on the cluster with the generated resources",
+      "name" : "deploy",
+      "type" : "string"
+    } ],
+    "tasks" : [ {
+      "name" : "git-clone",
+      "params" : [ {
+        "name" : "url",
+        "value" : "$(params.url)"
+      } ],
+      "taskRef" : {
+        "name" : "git-clone"
+      },
+      "workspaces" : [ {
+        "name" : "project-dir",
+        "workspace" : "project-dir"
+      } ]
+    }, {
+      "name" : "maven-package-test",
+      "params" : [ {
+        "name" : "DOCKER_CONFIG",
+        "value" : "$(workspaces.dockerconfig.path)/config.json"
+      }, {
+        "name" : "GOALS",
+        "value" : [ "package" ]
+      } ],
+      "taskRef" : {
+        "name" : "maven"
+      },
+      "workspaces" : [ {
+        "name" : "maven-settings",
+        "workspace" : "maven-settings"
+      }, {
+        "name" : "project-dir",
+        "workspace" : "project-dir"
+      }, {
+        "name" : "maven-local-repo",
+        "workspace" : "maven-repo-dir"
+      } ]
+    }, {
+      "name" : "buildah-image",
+      "params" : [ {
+        "name" : "IMAGE",
+        "value" : "$(params.output-image)"
+      }, {
+        "name" : "DOCKERFILE",
+        "value" : "$(params.dockerfile)"
+      }, {
+        "name" : "REGISTRY_AUTH_PATH",
+        "value" : "$(workspaces.dockerconfig-secret.path)"
+      } ],
+      "runAfter" : [ "maven-package-test" ],
+      "taskRef" : {
+        "name" : "buildah"
+      },
+      "workspaces" : [ {
+        "name" : "project-dir",
+        "workspace" : "project-dir"
+      }, {
+        "name" : "dockerconfig-secret",
+        "workspace" : "dockerconfig-secret"
+      } ]
+    } ],
+    "workspaces" : [ {
+      "name" : "project-dir"
+    }, {
+      "name" : "maven-repo-dir"
+    }, {
+      "name" : "maven-settings"
+    }, {
+      "name" : "dockerconfig-secret"
+    } ]
+  }
+}, {
+  "apiVersion" : "tekton.dev/v1",
+  "kind" : "PipelineRun",
+  "metadata" : {
+    "name" : "hello-backstage-run"
+  },
+  "spec" : {
+    "pipelineRef" : {
+      "name" : "build-test-push"
+    },
+    "workspaces" : [ {
+      "emptyDir" : { },
+      "name" : "project-dir"
+    }, {
+      "emptyDir" : { },
+      "name" : "maven-repo-dir"
+    }, {
+      "emptyDir" : { },
+      "name" : "maven-settings"
+    }, {
+      "emptyDir" : { },
+      "name" : "dockerconfig-secret"
+    } ]
+  }
+} ]

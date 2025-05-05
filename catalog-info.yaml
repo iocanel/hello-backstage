@@ -9,6 +9,8 @@ spec:
     $text: ./openapi.yaml
 metadata:
   name: hello-backstage-api
+  tags:
+  - jandex
 --- 
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -27,5 +29,4 @@ metadata:
   annotations:
     backstage.io/source-location: url:https://github.com/iocanel/hello-backstage
   tags:
-  - java
-  - quarkus
+  - jandex

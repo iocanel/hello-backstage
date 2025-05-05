@@ -1,5 +1,6 @@
-
+---
 app:
   image: docker.io/iocanel/hello-backstage:1.0.0-SNAPSHOT
   ports:
     http: 8080
+  replicas: 3
